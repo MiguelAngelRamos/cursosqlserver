@@ -49,4 +49,36 @@ ORDER BY
 	S.SocioActivo DESC;
 
 -- Autores con mayor cantidad de obras
+
+-- COUNT(*) CantidadObras
+SELECT * FROM Autores AS A;
+
+SELECT 
+	Autores.AutorIdentificador, 
+	Autores.NombreCompleto
+FROM Autores
+INNER JOIN ObrasAutores 
+ON Autores.AutorIdentificador = ObrasAutores.AutorIdentificador;
+
+
+SELECT 
+	Autores.AutorIdentificador, 
+	Autores.NombreCompleto,
+	COUNT(*) As CantidadObras
+FROM Autores
+INNER JOIN ObrasAutores 
+ON Autores.AutorIdentificador = ObrasAutores.AutorIdentificador
+GROUP BY Autores.AutorIdentificador, Autores.NombreCompleto
+ORDER BY 
+	CantidadObras DESC;
+
+
+-- Calidad de los datos de contacto
+SELECT 
+	COUNT(*) TotalSocios,
+	SUM(CASE WHEN Socios.CorreoElectronico IS NULL THEN 1 ELSE 0 END) as SinCorreo,
+	SUM(CASE WHEN Socios.CorreoElectronico IS NOT NULL THEN 1 ELSE 0 END) AS ConCorreo,
+	SUM(CASE WHEN Socios.NumeroTelefono IS NULL THEN 1 ELSE 0 END) AS SinTelefono,
+	SUM(CASE WHEN Socios.NumeroTelefono IS NOT NULL THEN 1 ELSE 0 END) AS ConTelefono
+FROM Socios;
 ```
