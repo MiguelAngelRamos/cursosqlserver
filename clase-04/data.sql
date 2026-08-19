@@ -1,4 +1,4 @@
-USE BibliotecaSimple;
+USE Biblioteca_Simple;
 GO
 
 
