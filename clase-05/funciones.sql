@@ -65,3 +65,4 @@ END;
 GO
 
 SELECT IDPrestamo, FechaPrestamo, dbo.EstadoPrestamo(FechaPrestamo, 15) as Estado FROM Prestamos;
+
