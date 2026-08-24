@@ -22,4 +22,48 @@
    END;
    ===================================================== */
 
-   
+      GO
+
+   CREATE PROCEDURE dbo.sp_BuscarLibroPorTitulo
+        @Texto NVARCHAR(200)
+   AS
+   BEGIN
+        SELECT IDLibro, Titulo, Autor 
+        FROM Libros
+        WHERE Titulo LIKE N'%' + @Texto + N'%';
+
+   END;
+
+   GO
+   -- USO: 
+   EXEC dbo.sp_BuscarLibroPorTitulo @Texto = N'quijote';
+
+
+   -- Funciones, vistas y Procedimientos almacenado
+
+   -- Cual de estos 3 objetos puede realizar INSERT, UPDATE Y DELETE? - PROCEDIMIENTOS.
+
+   -- Cual de estos 3 objetos no puede recibir parametros. - vistas. - CORRECTO.
+
+
+   -- PROCEDIMIENTO CON LOGICA CONDICIONAL
+
+   CREATE PROCEDURE dbo.sp_RegistrarPrestamo
+       @IDLibro INT,
+       @IDUsuario INT
+   AS 
+   BEGIN
+        -- Verifica que el libro exista
+        IF NOT EXISTS (SELECT 1 FROM Libros WHERE IDLibro = @IDLibro)
+        BEGIN
+            PRINT 'Error: el Libro no existe.';
+            RETURN;
+        END 
+        -- Verifica que el usuario exista
+        IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IDUsuario = @IDUsuario)
+        BEGIN
+            PRINT 'Error: el usuario no existe.';
+            RETURN;
+        END 
+   END;
+   GO
