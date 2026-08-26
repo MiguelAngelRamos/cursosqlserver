@@ -181,3 +181,131 @@ EXEC dbo.usp_EstadoPrestamos @IDUsuario = 100;
 EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 30, @DiasLeve = 60, @IDUsuario = 100;
 -- UMBRALES INVALIDOS
 EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 100, @DiasLeve = 60;
+
+-- TRANSACCIONES USP 5
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_RegistrarPrestamoMultiple
+    @IDUsuario            INT,
+    @ListaLibros          NVARCHAR(500),       -- ej: N'11,12,13'
+    @FechaPrestamo        DATE = NULL,         -- default: hoy
+    @PrestamosRegistrados INT  = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    BEGIN TRY
+        -- ---------- Defaults ----------
+        SET @FechaPrestamo = ISNULL(@FechaPrestamo, CAST(GETDATE() AS DATE));
+
+        IF @FechaPrestamo > CAST(GETDATE() AS DATE)
+            THROW 50013, N'La fecha de prestamo no puede ser futura.', 1;
+
+        -- ---------- Parseo de la lista ----------
+        DECLARE @Libros TABLE (Posicion INT IDENTITY(1,1), IDLibro INT NULL);
+
+        INSERT INTO @Libros (IDLibro)
+        SELECT TRY_CAST(LTRIM(RTRIM(value)) AS INT)
+        FROM STRING_SPLIT(@ListaLibros, N',');
+
+        -- ---------- Validaciones (TODAS antes de escribir nada) ----------
+        IF NOT EXISTS (SELECT 1 FROM @Libros)
+            THROW 50024, N'La lista de libros esta vacia.', 1;
+
+        IF EXISTS (SELECT 1 FROM @Libros WHERE IDLibro IS NULL)
+            THROW 50026, N'La lista contiene valores no numericos.', 1;
+
+        IF EXISTS (SELECT IDLibro FROM @Libros
+                   GROUP BY IDLibro HAVING COUNT(*) > 1)
+            THROW 50025, N'La lista contiene libros duplicados.', 1;
+
+        DECLARE @Faltantes NVARCHAR(300) =
+            (SELECT STRING_AGG(CAST(lb.IDLibro AS VARCHAR(10)), N', ')
+             FROM (SELECT DISTINCT IDLibro FROM @Libros) AS lb
+             WHERE NOT EXISTS (SELECT 1 FROM dbo.Libros AS l
+                               WHERE l.IDLibro = lb.IDLibro));
+
+        IF @Faltantes IS NOT NULL
+        BEGIN
+            DECLARE @MsgLib NVARCHAR(400) =
+                CONCAT(N'Los siguientes libros no existen: ', @Faltantes, N'.');
+            THROW 50011, @MsgLib, 1;
+        END;
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario)
+        BEGIN
+            DECLARE @MsgUsr NVARCHAR(200) =
+                CONCAT(N'El usuario ', @IDUsuario, N' no existe.');
+            THROW 50012, @MsgUsr, 1;
+        END;
+
+        -- ---------- Escrituras multiples: aqui SI se justifica la transaccion ----------
+        BEGIN TRANSACTION;
+
+        DECLARE @Posicion      INT = 1,
+                @UltimaPosicion INT = (SELECT MAX(Posicion) FROM @Libros),
+                @IDLibroActual INT;
+
+        WHILE @Posicion <= @UltimaPosicion
+        BEGIN
+            SELECT @IDLibroActual = IDLibro
+            FROM @Libros
+            WHERE Posicion = @Posicion;
+
+            INSERT INTO dbo.Prestamos (IDLibro, IDUsuario, FechaPrestamo)
+            VALUES (@IDLibroActual, @IDUsuario, @FechaPrestamo);
+
+            SET @Posicion += 1;
+        END;
+
+        COMMIT TRANSACTION;
+
+        SET @PrestamosRegistrados = @UltimaPosicion;
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() <> 0
+            ROLLBACK TRANSACTION;
+
+        SET @PrestamosRegistrados = NULL;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+-- 6 
+
+CREATE OR ALTER PROCEDURE dbo.usp_ListarLibros
+    @OrdenarPor  NVARCHAR(30) = N'Titulo',
+    @Descendente BIT          = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        -- Defensa 1: lista blanca
+        IF @OrdenarPor NOT IN (N'IDLibro', N'Titulo', N'Autor')
+        BEGIN
+            DECLARE @MsgCol NVARCHAR(200) = CONCAT(
+                N'Columna de ordenamiento no permitida: ', @OrdenarPor,
+                N'. Use IDLibro, Titulo o Autor.');
+            THROW 50031, @MsgCol, 1;
+        END;
+
+        -- Defensa 2: QUOTENAME
+        DECLARE @Sql NVARCHAR(400) = CONCAT(
+            N'SELECT IDLibro, Titulo, Autor FROM dbo.Libros ORDER BY ',
+            QUOTENAME(@OrdenarPor),
+            CASE WHEN @Descendente = 1 THEN N' DESC' ELSE N' ASC' END, N';');
+
+        EXEC sys.sp_executesql @Sql;
+
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
