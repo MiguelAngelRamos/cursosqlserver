@@ -83,3 +83,30 @@ BEGIN
     END CATCH;
 END;
 GO
+
+-- 3 PROCEDIMIENTO
+
+CREATE OR ALTER PROCEDURE dbo.usp_BuscarLibros
+    @Titulo NVARCHAR(200) = NULL,
+    @Autor  NVARCHAR(150) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF @Titulo IS NULL AND @Autor IS NULL
+            THROW 50022, N'Debe indicar al menos un criterio: titulo o autor.', 1;
+
+        SELECT l.IDLibro, l.Titulo, l.Autor
+        FROM dbo.Libros AS l
+        WHERE (@Titulo IS NULL OR l.Titulo LIKE N'%' + @Titulo + N'%')
+          AND (@Autor  IS NULL OR l.Autor  LIKE N'%' + @Autor  + N'%')
+        ORDER BY l.Titulo;
+
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
