@@ -175,3 +175,9 @@ BEGIN
     END CATCH;
 END;
 GO
+
+EXEC dbo.usp_EstadoPrestamos @IDUsuario = 100;
+-- Cambiamos los UMBRALES
+EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 30, @DiasLeve = 60, @IDUsuario = 100;
+-- UMBRALES INVALIDOS
+EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 100, @DiasLeve = 60;
