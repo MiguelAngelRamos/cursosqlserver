@@ -40,3 +40,46 @@ BEGIN
     ORDER BY l.IDLibro;
 END;
 GO
+
+
+GO
+
+-- SEGUNDO usp
+
+CREATE OR ALTER PROCEDURE dbo.usp_PrestamosDeUsuario
+    @IDUsuario       INT,
+    @TotalPrestamos  INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario)
+        BEGIN
+            DECLARE @Msg NVARCHAR(200) =
+                CONCAT(N'El usuario ', @IDUsuario, N' no existe.');
+            THROW 50012, @Msg, 1;
+        END;
+
+        SELECT p.IDPrestamo,
+               l.IDLibro,
+               l.Titulo,
+               l.Autor,
+               p.FechaPrestamo
+        FROM dbo.Prestamos AS p
+        JOIN dbo.Libros    AS l ON l.IDLibro = p.IDLibro
+        WHERE p.IDUsuario = @IDUsuario
+        ORDER BY p.FechaPrestamo DESC, p.IDPrestamo DESC;
+
+        SELECT @TotalPrestamos = COUNT(*)
+        FROM dbo.Prestamos
+        WHERE IDUsuario = @IDUsuario;
+
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        SET @TotalPrestamos = NULL;
+        THROW;
+    END CATCH;
+END;
+GO
