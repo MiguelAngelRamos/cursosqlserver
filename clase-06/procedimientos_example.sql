@@ -83,9 +83,16 @@ BEGIN
     END CATCH;
 END;
 GO
+-- LLAMADOR USP 2
+
+DECLARE @Total INT;
+
+EXEC dbo.usp_PrestamosDeUsuario @IDUsuario = 100 , @TotalPrestamos = @Total OUTPUT;
+
+SELECT @Total as TotalDePrestamosUsuario;
 
 -- 3 PROCEDIMIENTO
-
+GO 
 CREATE OR ALTER PROCEDURE dbo.usp_BuscarLibros
     @Titulo NVARCHAR(200) = NULL,
     @Autor  NVARCHAR(150) = NULL
@@ -102,6 +109,64 @@ BEGIN
         WHERE (@Titulo IS NULL OR l.Titulo LIKE N'%' + @Titulo + N'%')
           AND (@Autor  IS NULL OR l.Autor  LIKE N'%' + @Autor  + N'%')
         ORDER BY l.Titulo;
+
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH;
+END;
+GO
+-- LLAMADOR
+EXEC dbo.usp_BuscarLibros @Autor = N'G';
+
+
+-- 4 PROCEDIMIENTO
+GO
+CREATE OR ALTER PROCEDURE dbo.usp_EstadoPrestamos
+    @DiasATiempo INT = 15,      -- hasta aqui: 'A tiempo'
+    @DiasLeve    INT = 22,      -- hasta aqui: 'Vencido leve'; despues: 'Vencido grave'
+    @IDUsuario   INT = NULL     -- NULL = todos los usuarios
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF @DiasATiempo IS NULL OR @DiasLeve IS NULL
+           OR @DiasATiempo < 1 OR @DiasATiempo >= @DiasLeve
+        BEGIN
+            DECLARE @MsgUmbral NVARCHAR(200) = CONCAT(
+                N'Umbrales invalidos: A tiempo (', @DiasATiempo,
+                N') debe ser >= 1 y menor que Vencido leve (', @DiasLeve, N').');
+            THROW 50023, @MsgUmbral, 1;
+        END;
+
+        IF @IDUsuario IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario)
+        BEGIN
+            DECLARE @MsgUsr NVARCHAR(200) =
+                CONCAT(N'El usuario ', @IDUsuario, N' no existe.');
+            THROW 50012, @MsgUsr, 1;
+        END;
+
+        SELECT p.IDPrestamo,
+               u.Nombre AS Usuario,
+               l.Titulo,
+               p.FechaPrestamo,
+               DATEDIFF(DAY, p.FechaPrestamo, CAST(GETDATE() AS DATE))
+                   AS DiasTranscurridos,
+               CASE
+                   WHEN DATEDIFF(DAY, p.FechaPrestamo, CAST(GETDATE() AS DATE))
+                        <= @DiasATiempo THEN N'A tiempo'
+                   WHEN DATEDIFF(DAY, p.FechaPrestamo, CAST(GETDATE() AS DATE))
+                        <= @DiasLeve THEN N'Vencido leve'
+                   ELSE N'Vencido grave'
+               END AS Estado
+        FROM dbo.Prestamos AS p
+        JOIN dbo.Usuarios  AS u ON u.IDUsuario = p.IDUsuario
+        JOIN dbo.Libros    AS l ON l.IDLibro   = p.IDLibro
+        WHERE (@IDUsuario IS NULL OR p.IDUsuario = @IDUsuario)
+        ORDER BY DiasTranscurridos DESC, p.IDPrestamo;
 
         RETURN 0;
     END TRY
