@@ -47,23 +47,39 @@
 
 
    -- PROCEDIMIENTO CON LOGICA CONDICIONAL
+  GO
+  
+  CREATE PROCEDURE dbo.usp_RegistrarPrestamo
+      @IDLibro INT,
+      @IDUsuario INT,
+      @FechaPrestamo DATE
+  AS 
+  BEGIN
+      -- Verifica que el libro exista
+      IF NOT EXISTS (SELECT 1 FROM Libros WHERE IDLibro = @IDLibro)
+      BEGIN
+          PRINT 'Error: el Libro no existe.';
+          RETURN;
+      END 
+      -- Verifica que el usuario exista
+      IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IDUsuario = @IDUsuario)
+      BEGIN
+          PRINT 'Error: el usuario no existe.';
+          RETURN;
+      END;
 
-   CREATE PROCEDURE dbo.sp_RegistrarPrestamo
-       @IDLibro INT,
-       @IDUsuario INT
-   AS 
-   BEGIN
-        -- Verifica que el libro exista
-        IF NOT EXISTS (SELECT 1 FROM Libros WHERE IDLibro = @IDLibro)
-        BEGIN
-            PRINT 'Error: el Libro no existe.';
-            RETURN;
-        END 
-        -- Verifica que el usuario exista
-        IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IDUsuario = @IDUsuario)
-        BEGIN
-            PRINT 'Error: el usuario no existe.';
-            RETURN;
-        END 
-   END;
-   GO
+      INSERT INTO Prestamos
+      (
+          IDLibro, 
+          IDUsuario, 
+          FechaPrestamo
+      )
+      VALUES 
+      (
+          @IDLibro,
+          @IDUsuario,
+          @FechaPrestamo
+      )
+
+  END;
+  GO
