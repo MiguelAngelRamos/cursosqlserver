@@ -147,3 +147,25 @@ EXEC dbo.usp_RegistrarPrestamo
     @IDPrestamo = @NuevoID OUTPUT
 
 SELECT @NuevoID AS IDGeneradoPrestamoExito
+
+-- IDLibro = 999
+EXEC dbo.usp_RegistrarPrestamo @IDLibro = 999,  @IDUsuario = 100;
+
+/*
+En el aso de IDLibro 999 devuelve el siguiente error:
+Mensaje 50011, nivel 16, estado 1, procedimiento dbo.usp_RegistrarPrestamo, línea 23 [línea de inicio de lote 63]
+El libro 999 no existe.
+
+Severity level estos niveles van del 0 al 25
+
+- 11 - 16: errores que puede corregir el usuario(datos invalidos, incumplimiento de una regla de negocio, referencia inexistente, etc)
+- 17 - 19 : Errores de recursos del servidor (normalmente no lo generamos nosotros, infraestructura servidor)
+- 20 - 25 : Errores Fatales (Cierran la conexión)
+*/
+
+
+-- @IDUsuario = 50
+EXEC dbo.usp_RegistrarPrestamo @IDLibro = 1,  @IDUsuario = 50;
+
+-- Verificacion final
+SELECT COUNT(*) AS TotalPrestamos FROM dbo.Prestamos;
