@@ -48,7 +48,7 @@
 
    -- PROCEDIMIENTO CON LOGICA CONDICIONAL
   GO
-  
+
   CREATE PROCEDURE dbo.usp_RegistrarPrestamo
       @IDLibro INT,
       @IDUsuario INT,
@@ -83,3 +83,55 @@
 
   END;
   GO
+
+  -- PROCEDIMIENTO CON LAS 8 MEJORAS
+
+  
+CREATE OR ALTER PROCEDURE dbo.usp_RegistrarPrestamo
+    @IDLibro       INT,
+    @IDUsuario     INT,
+    @FechaPrestamo DATE = NULL,          -- default: la fecha de hoy
+    @IDPrestamo    INT  = NULL OUTPUT    -- devuelve el ID generado
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        -- ---------- Resolucion de defaults ----------
+        SET @FechaPrestamo = ISNULL(@FechaPrestamo, CAST(GETDATE() AS DATE));
+
+        -- ---------- Validaciones de negocio ----------
+        IF @FechaPrestamo > CAST(GETDATE() AS DATE)
+            THROW 50013, N'La fecha de prestamo no puede ser futura.', 1;
+
+        DECLARE @Msg NVARCHAR(200);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Libros WHERE IDLibro = @IDLibro)
+        BEGIN
+            SET @Msg = CONCAT(N'El libro ', @IDLibro, N' no existe.');
+            THROW 50011, @Msg, 1;
+        END;
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario)
+        BEGIN
+            SET @Msg = CONCAT(N'El usuario ', @IDUsuario, N' no existe.');
+            THROW 50012, @Msg, 1;
+        END;
+
+        -- ---------- Operacion ----------
+        INSERT INTO dbo.Prestamos (IDLibro, IDUsuario, FechaPrestamo)
+        VALUES (@IDLibro, @IDUsuario, @FechaPrestamo);
+
+        SET @IDPrestamo = SCOPE_IDENTITY();
+
+        RETURN 0;
+    END TRY
+    BEGIN CATCH
+        -- Las validaciones hacen amables los errores COMUNES; no eliminan los
+        -- demas. Si el libro se borrara entre el IF NOT EXISTS y el INSERT,
+        -- la FK dispararia el error 547 y este CATCH lo capturaria igual.
+        SET @IDPrestamo = NULL;
+        THROW;   -- relanza el error original hacia el llamador
+    END CATCH;
+END;
+GO
