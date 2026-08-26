@@ -135,3 +135,15 @@ BEGIN
     END CATCH;
 END;
 GO
+
+-- PROBAR PROCEDIMIENTO
+-- PRUEBAS EJECUTAR BLOQUE POR BLOQUE
+
+DECLARE @NuevoID INT;
+
+EXEC dbo.usp_RegistrarPrestamo
+    @IDLibro = 11,
+    @IDUsuario = 109,
+    @IDPrestamo = @NuevoID OUTPUT
+
+SELECT @NuevoID AS IDGeneradoPrestamoExito
