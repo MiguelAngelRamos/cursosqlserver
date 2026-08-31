@@ -182,7 +182,7 @@ EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 30, @DiasLeve = 60, @IDUsuario = 100
 -- UMBRALES INVALIDOS
 EXEC dbo.usp_EstadoPrestamos @DiasATiempo = 100, @DiasLeve = 60;
 
--- TRANSACCIONES USP 5
+-- USP 5
 GO
 
 CREATE OR ALTER PROCEDURE dbo.usp_RegistrarPrestamoMultiple
