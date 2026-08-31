@@ -7,13 +7,11 @@ CREATE OR ALTER PROCEDURE dbo.usp_Transferir_v1_Ingenua
   @Monto           DECIMAL(12,2)
 AS
 BEGIN
-  BEGIN
   -- Saldo -= @Monto  Equivale a Saldo = Saldo - @Monto
   UPDATE dbo.Cuenta SET Saldo -= @Monto WHERE CuentaId = @CuentaOrigenId;
   -- Saldo += @Monto  Equivale a Saldo = Saldo + @Monto
   UPDATE dbo.Cuenta SET Saldo += @Monto WHERE CuentaId = @CuentaDestinoId;
 END;
-
 GO;
 
 CREATE OR ALTER PROCEDURE dbo.usp_Transferir_v2_SinManejoErrores
