@@ -46,7 +46,11 @@ CREATE OR ALTER PROCEDURE dbo.usp_TransferirFondos
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET XACT_ABORT ON;
+    SET XACT_ABORT ON; -- La linea mas importante de todo el procedimiento, Por defecto (OFF)
+    /*
+    Si ocurre un error de ejecución (como no cumplir un CHECK (Saldo >=0), sql server cancela solo la instruccion
+    que fallo y sigue ejecutando el lote
+    */
 
     BEGIN TRY
         -- ---------- Validaciones que no requieren bloqueos ----------
